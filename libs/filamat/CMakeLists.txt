@@ -92,10 +92,36 @@ target_compile_options(${TARGET} PRIVATE
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-# Currently disabled because we don't need it
-# To properly support Vulkan, filamat needs to support SPIR-V compilation
-# install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
-# install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
+set(FILAMAT_DEPS
+        OGLCompiler
+        OSDependent
+        SPIRV
+        SPIRV-Tools
+        SPIRV-Tools-opt
+        SPVRemapper
+        filamat
+        glslang
+        spirv-cross-core
+        spirv-cross-glsl
+        spirv-cross-msl
+        )
+
+set(FILAMAT_DEPS_FILES )
+foreach(DEPENDENCY ${FILAMAT_DEPS})
+   set(FILAMAT_DEPS_FILES "${FILAMAT_DEPS_FILES} $<TARGET_FILE:${DEPENDENCY}>")
+endforeach()
+
+set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
+set(COMBINE_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/combine_static_libs.sh")
+add_custom_command(
+    TARGET filamat POST_BUILD
+    COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${FILAMAT_COMBINED_OUTPUT}" "${FILAMAT_DEPS_FILES}"
+    COMMENT "Combing filamat dependencies into single shared library"
+)
+
+install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME libfilamat.a)
+install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 
 # ==================================================================================================
 # Tests
